@@ -1,0 +1,31 @@
+{
+  "getPublicIpInstanceListResponse": {
+    "totalRows": 2,
+    "publicIpInstanceList": [
+      {
+        "publicIpInstanceNo": "1001",
+        "publicIp": "203.0.113.1",
+        "publicIpDescription": "",
+        "createDate": "2026-10-09T18:49:19+0900",
+        "publicIpInstanceStatus": {
+          "code": "RUN"
+        },
+        "serverInstanceNo": "",
+        "serverName": ""
+      },
+      {
+        "publicIpInstanceNo": "1002",
+        "publicIp": "203.0.113.2",
+        "publicIpDescription": "",
+        "createDate": "2026-10-09T18:49:16+0900",
+        "publicIpInstanceStatus": {
+          "code": "RUN"
+        },
+        "serverInstanceNo": "",
+        "serverName": ""
+      }
+    ],
+    "returnCode": "0",
+    "returnMessage": "success"
+  }
+}
