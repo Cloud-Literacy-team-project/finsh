@@ -1,0 +1,7 @@
+requests
+pymysql
+pyyaml
+bcrypt
+holidays
+boto3
+rich
