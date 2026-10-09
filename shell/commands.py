@@ -1,8 +1,6 @@
 import cmd
 import shlex
-from shell import data
-
-TYPE_NAME = {"server": "서버", "publicip": "공인IP", "blockstorage": "스토리지"}
+from shell import data, screen
 
 class FinshShell(cmd.Cmd):
     def __init__(self, user):
@@ -11,14 +9,9 @@ class FinshShell(cmd.Cmd):
         self.prompt = f"{user}@finsh:~$ "
 
     def do_top(self, arg):
-        """쓸모없는 자원 목록"""
+        """쓸모없는 자원 목록 출력"""
         leaks = sorted(data.get_leaks(), key=lambda r: r["cost_total"], reverse=True)
-        print(f"  {'ID':<10}{'종류':<8}{'판정':<8}{'방치':<6}{'시간당':<8}쌓인 요금")
-        for r in leaks:
-            print(f"  {r['id']:<10}{TYPE_NAME[r['type']]:<8}{r['grade']:<8}"
-                  f"{str(r['idle_days'])+'일':<6}{str(r['cost_hourly'])+'원':<8}{r['cost_total']:,}원")
-        hourly = sum(r["cost_hourly"] for r in leaks)
-        print(f"  합계 {len(leaks)}개 · 시간당 {hourly:.1f}원")
+        screen.print_top(leaks)
 
     def do_stat(self, arg):
         """자원 하나 자세히 보기: stat <ID>"""
@@ -30,11 +23,11 @@ class FinshShell(cmd.Cmd):
         if r is None:
             print(f"stat: {args[0]}: 그런 ID가 없습니다")
             return
-        for key, value in r.items():
-            print(f"  {key}: {value}")
+        screen.print_stat(r)
 
     def do_exit(self, arg):
         """finsh 끝내기"""
+        print("finsh를 종료합니다.")
         return True
 
     def default(self, line):
