@@ -218,3 +218,22 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.tfvars
+*.tfvars.json
+*.tfplan
+
+# Terraform credentials and generated key/plan files
+.terraform/
+*.pem
+*.plan
+backend.hcl
+backend.*.hcl
+*.tfbackend
+!terraform.tfvars.example
+!.terraform.lock.hcl

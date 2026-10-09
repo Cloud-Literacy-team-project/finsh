@@ -1,0 +1,17 @@
+# Provider and Backend credentials are environment variables, never tfvars.
+# Run ./load-env.ps1 in the PowerShell terminal that will run Terraform.
+region      = "KR"
+zone_kr1    = "KR-1"
+name_prefix = "finsh"
+vpc_cidr    = "10.0.0.0/16"
+subnet_cidr = "10.0.1.0/24"
+
+# Keep [] to create servers with no external SSH ingress.
+# Later use actual team public IPv4 /32s, e.g. ["203.0.113.10/32"] (documentation-only IP).
+# Never open SSH to 0.0.0.0/0.
+team_ips = []
+
+# Verified read-only on 2026-10-09 for KR-1; recheck before apply.
+# Ubuntu 24.04 x86_64 KVM, 2 vCPU / 4 GiB, supports separate NICs.
+server_image_number = "104630229"
+server_spec_code    = "c2-g3a"
