@@ -1,0 +1,13 @@
+{
+  "_sample_note": "실계정의 점검 완료 후 상세 조회 결과. data가 빈 배열이므로 실제 instanceNo 매핑은 검증되지 않았습니다.",
+  "result": "SUCCESS",
+  "contents": {
+    "itemCode": "IDLE_RESOURCE_VM",
+    "meta": {
+      "totalPage": 0,
+      "currentPage": 1,
+      "size": 20
+    },
+    "data": []
+  }
+}
