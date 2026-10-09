@@ -1,0 +1,31 @@
+{
+  "getServerInstanceListResponse": {
+    "totalRows": 2,
+    "serverInstanceList": [
+      {
+        "serverInstanceNo": "1001",
+        "serverName": "finsh-test-b-srv2",
+        "serverInstanceStatus": {
+          "code": "NSTOP"
+        },
+        "createDate": "2026-10-09T18:21:28+0900",
+        "serverSpecCode": "s2-g3a",
+        "serverProductCode": "SVR.VSVR.AMD.STAND.C002.M008.G003",
+        "publicIp": null
+      },
+      {
+        "serverInstanceNo": "1002",
+        "serverName": "finsh-test-b-srv1",
+        "serverInstanceStatus": {
+          "code": "NSTOP"
+        },
+        "createDate": "2026-10-09T18:19:53+0900",
+        "serverSpecCode": "s2-g3a",
+        "serverProductCode": "SVR.VSVR.AMD.STAND.C002.M008.G003",
+        "publicIp": null
+      }
+    ],
+    "returnCode": "0",
+    "returnMessage": "success"
+  }
+}
