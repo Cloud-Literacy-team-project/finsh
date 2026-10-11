@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local C task checklist
+/C-TODAY-2026-10-09.md
+/docs/c-api-findings.md
