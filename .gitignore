@@ -219,6 +219,21 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Local C task checklist
-/C-TODAY-2026-10-09.md
-/docs/c-api-findings.md
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.tfvars
+*.tfvars.json
+*.tfplan
+
+# Terraform credentials and generated key/plan files
+.terraform/
+*.pem
+*.plan
+backend.hcl
+backend.*.hcl
+*.tfbackend
+!terraform.tfvars.example
+!.terraform.lock.hcl
