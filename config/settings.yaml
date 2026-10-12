@@ -1,27 +1,36 @@
-# 판정 기준
+# 판정 기준 (소수도 됨: 0.007일 ≈ 10분, 시연 때 사용)
 zombie_days: 7
+orphan_days: 0
 idle_days: 7
 idle_cpu_percent: 5
+observe_max_gap_minutes: 90
+cpu_min_coverage: 0.8
+cpu_max_missing: 2
 
 # 탐지 범위 (비워두면 계정 전체)
 scan_name_prefix: "finsh-"
 
-# 휴지통
+# 휴지통 (시연 때는 unit: minutes 로)
 trash_wait: { unit: bizdays, value: 3 }
 notify_before: { unit: bizdays, value: 1 }
 
 # 보호 기간
 protect_days: 30
 
-# 개발 중 안전장치
+# 개발 중 안전장치: 진짜로 지울 수 있는 것은 아래 둘 중 하나에 해당하는 것만
 allowed_name_prefix: "finsh-test-"
 
-allowed_ncp_no:
+allowed_ncp_no:   # 이름이 없는 공인 IP용
   - "146158239"
   - "146159347"
   - "146159416"
-  - "146159627"  
+  - "146159627"
   - "146159628"
   - "146159671"
   - "146159677"
   - "146159965"
+
+# 어떤 경우에도 건드리지 않는 이름
+never_touch:
+  - "finsh-bastion"
+  - "finsh-db"

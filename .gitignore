@@ -219,7 +219,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-<<<<<<< Updated upstream
 # Terraform
 **/.terraform/*
 *.tfstate
@@ -238,6 +237,6 @@ backend.*.hcl
 *.tfbackend
 !terraform.tfvars.example
 !.terraform.lock.hcl
-=======
-leak.json #실제 자원 정보가 들어갈 곳
->>>>>>> Stashed changes
+
+# 실제 자원 정보가 담긴 스캔 결과
+leak.json
