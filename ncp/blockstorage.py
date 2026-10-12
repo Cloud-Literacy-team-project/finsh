@@ -47,6 +47,7 @@ def list_all():
                     "size_gb": size_bytes / BYTES_PER_GIB if size_bytes is not None else None,
                     "attached_server": attached_server,
                     "storage_type": storage_type,
+                    "disk_type": (item.get("blockStorageDiskDetailType") or {}).get("code"),
                 },
             })
 
