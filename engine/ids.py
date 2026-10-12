@@ -8,7 +8,8 @@ PREFIX = {"server": "srv", "publicip": "ip", "blockstorage": "blk"}
 
 def make_id(resource):
     kind = resource["type"]
-    number = str(resource["ncp_no"])
+    raw_number = resource.get("ncp_no")
+    number = str(raw_number).strip() if raw_number is not None else ""
     if kind not in PREFIX or not number:
         raise ValueError(f"알 수 없는 자원 종류 또는 번호: {kind!r}, {number!r}")
     digest = hashlib.sha256(f"{kind}:{number}".encode("utf-8")).hexdigest()[:4]
@@ -26,3 +27,8 @@ def assign_ids(resources):
         seen[rid] = identity
         resource["id"] = rid
     return resources
+
+
+def add_ids(resources):
+    """팀 공통 이름. 기존 assign_ids 호출과 같은 안전한 ID 생성기를 사용한다."""
+    return assign_ids(resources)

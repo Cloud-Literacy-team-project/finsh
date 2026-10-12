@@ -3,6 +3,9 @@ zombie_days: 7
 orphan_days: 0
 idle_days: 7
 idle_cpu_percent: 5
+observe_max_gap_minutes: 90
+cpu_min_coverage: 0.8
+cpu_max_missing: 2
 
 # 탐지 범위 (비워두면 계정 전체)
 scan_name_prefix: "finsh-"

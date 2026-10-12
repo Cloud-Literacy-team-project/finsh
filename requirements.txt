@@ -1,8 +1,8 @@
 requests
+python-dotenv
 pymysql
 pyyaml
 bcrypt
 holidays
 boto3
 rich
-python-dotenv

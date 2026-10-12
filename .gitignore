@@ -240,8 +240,10 @@ backend.*.hcl
 
 # Local resource data
 leak.json
+leak.json.tmp
 
 # Private C notes
 /C-TODAY-2026-10-09.md
 /docs/c-api-findings.md
 /C-TODAY-2026-10-12.md
+/C-TODAY-2026-10-14.md
