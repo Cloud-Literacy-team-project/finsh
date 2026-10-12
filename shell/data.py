@@ -27,3 +27,10 @@ def get_resource(rid):
         return found[0] if len(found) == 1 else None
     from db import database
     return database.get_resource(rid)
+
+def get_summary():
+    """top 아래 요약 (가짜 모드에서는 없음)"""
+    if _fake():
+        return None
+    from db import database
+    return database.get_summary()

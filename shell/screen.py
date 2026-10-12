@@ -119,3 +119,68 @@ def print_kill_confirm(r, plan):
 def print_refused(command, rid, reason):
     """삭제 거부 메시지"""
     console.print(f"[bold red]{command}: {rid}: 거부됨[/bold red] — {reason}")
+    
+def _table(title, columns):
+    table = Table(title=f"[bold yellow]{title}[/bold yellow]", show_header=True, header_style="bold cyan")
+    for name in columns:
+        table.add_column(name)
+    return table
+
+def _dt(value):
+    return value.strftime("%m/%d %H:%M") if value else "-"
+
+STATUS_NAME = {"WAITING": "[yellow]대기[/yellow]", "HELD": "[bold red]보류[/bold red]"}
+
+def print_trash(rows):
+    """trash-list"""
+    if not rows:
+        console.print("휴지통이 비어 있습니다.")
+        return
+    table = _table("휴지통", ["ID", "이름", "종류", "상태", "넣은 시각", "삭제 예정", "보류 이유"])
+    for t in rows:
+        table.add_row(t["id"], t["name"], TYPE_NAME.get(t["type"], t["type"]), STATUS_NAME.get(t["status"], t["status"]),
+                      _dt(t["put_at"]), _dt(t["due_at"]), _v(t.get("hold_reason")))
+    console.print(table)
+
+def print_lsattr(rows):
+    """lsattr: 보호 중인 자원"""
+    if not rows:
+        console.print("보호 중인 자원이 없습니다.")
+        return
+    table = _table("보호 중 (chattr +i)", ["속성", "ID", "이름", "출처", "이유", "기한"])
+    for p in rows:
+        source = "Terraform" if p["source"] == "terraform" else "사람"
+        table.add_row("----i----", p.get("id") or p["ncp_no"], _v(p.get("name")), source, _v(p["reason"]),
+                      "영구" if p["until"] is None else _dt(p["until"]))
+    console.print(table)
+
+RESULT_COLOR = {"OK": "green", "DRYRUN": "yellow", "FAIL": "red"}
+
+def print_last(rows):
+    """last: 최근 기록 (최신이 위)"""
+    if not rows:
+        console.print("기록이 없습니다.")
+        return
+    table = _table("최근 기록", ["시각", "동작", "ID", "이름", "결과", "메시지"])
+    for e in rows:
+        color = RESULT_COLOR.get(e["result"], "white")
+        table.add_row(_dt(e["at"]), e["action"], _v(e.get("id")), _v(e.get("name")),
+                      f"[{color}]{e['result']}[/{color}]", _v(e.get("message")))
+    console.print(table)
+
+def print_kill9_warning(r, dry_run):
+    mode = "[yellow](연습 모드: 실제로는 지우지 않음)[/yellow]\n" if dry_run else ""
+    console.print(Panel(
+        f"{mode}[bold]{r['id']}[/bold]  {r['name']}  ({TYPE_NAME.get(r['type'], r['type'])})\n\n"
+        "휴지통을 거치지 않고 [bold red]지금 바로 영구 삭제[/bold red]합니다. 되돌릴 수 없습니다.",
+        title="[bold red]sudo kill -9[/bold red]", expand=False))
+
+def print_alerts(rows):
+    """finsh 시작할 때 새 알림"""
+    if not rows:
+        return
+    console.print(f"[bold yellow]새 알림 {len(rows)}건[/bold yellow]")
+    for a in rows:
+        color = "red" if a["level"] == "WARN" else "white"
+        console.print(f"  [{color}]{_dt(a['at'])}  {a['message']}[/{color}]")
+    console.print()
