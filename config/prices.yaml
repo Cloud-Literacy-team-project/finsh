@@ -1,0 +1,12 @@
+# 출처: https://www.ncloud.com/charge/region/ko
+# 확인일: 2026-10-09, 한국 리전, 원화, VAT 별도, 예상 단가
+currency: KRW
+publicip_hourly: 5.6
+blockstorage_hourly_per_10gb:
+  HDD: 0.8
+  SSD: 1.6
+
+# 서버 사양별 요금은 공식 단가 확인 후 채운다. 빈 값은 0원이 아니라 '미확인'이다.
+server_hourly:
+  RUNNING: {}
+  STOPPED: {}

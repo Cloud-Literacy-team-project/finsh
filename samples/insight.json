@@ -1,0 +1,27 @@
+{
+  "_sample_note": "실제 조회에서 데이터 형태만 발췌. instanceNo는 가상 값이고 CPU 값은 실제 값의 반올림 예시입니다.",
+  "request_example": {
+    "method": "POST",
+    "path": "/cw_fea/real/cw/api/data/query",
+    "metric": "avg_cpu_used_rto",
+    "interval": "Min5",
+    "aggregation": "AVG",
+    "dimensions": {
+      "instanceNo": "00000001"
+    }
+  },
+  "response_example": [
+    [
+      1791538500000,
+      0.147
+    ],
+    [
+      1791538800000,
+      0.132
+    ],
+    [
+      1791539100000,
+      0.158
+    ]
+  ]
+}

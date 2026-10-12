@@ -1,0 +1,27 @@
+# 판정 기준
+zombie_days: 7
+idle_days: 7
+idle_cpu_percent: 5
+
+# 탐지 범위 (비워두면 계정 전체)
+scan_name_prefix: "finsh-"
+
+# 휴지통
+trash_wait: { unit: bizdays, value: 3 }
+notify_before: { unit: bizdays, value: 1 }
+
+# 보호 기간
+protect_days: 30
+
+# 개발 중 안전장치
+allowed_name_prefix: "finsh-test-"
+
+allowed_ncp_no:
+  - "146158239"
+  - "146159347"
+  - "146159416"
+  - "146159627"  
+  - "146159628"
+  - "146159671"
+  - "146159677"
+  - "146159965"
