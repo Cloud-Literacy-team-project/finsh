@@ -237,3 +237,4 @@ backend.*.hcl
 *.tfbackend
 !terraform.tfvars.example
 !.terraform.lock.hcl
+logs/
