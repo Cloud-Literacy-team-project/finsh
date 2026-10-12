@@ -151,6 +151,8 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
 .envrc
 .venv
 env/
@@ -231,6 +233,12 @@ terraform.tfvars
 # Terraform credentials and generated key/plan files
 .terraform/
 *.pem
+*.key
+*.ppk
+*.p12
+*.pfx
+*.jks
+*.keystore
 *.plan
 backend.hcl
 backend.*.hcl
