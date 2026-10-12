@@ -240,3 +240,4 @@ backend.*.hcl
 
 # 실제 자원 정보가 담긴 스캔 결과
 leak.json
+leak.json.tmp
