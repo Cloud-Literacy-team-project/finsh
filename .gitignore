@@ -255,3 +255,6 @@ leak.json.tmp
 /docs/c-api-findings.md
 /C-TODAY-2026-10-12.md
 /C-TODAY-2026-10-14.md
+
+# Local logs
+logs/
