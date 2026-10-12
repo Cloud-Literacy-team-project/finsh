@@ -122,3 +122,11 @@ def cpu_stats_many(server_nos, days=7):
             # The exception message may contain an API response; log its type only.
             logging.warning("Cloud Insight CPU 조회 실패 (%s): %s", server_no, type(exc).__name__)
     return result
+
+
+def cpu_avg_many(server_nos, days=7):
+    """Return {server_no: CPU average}; no data stays None, failed queries are omitted."""
+    return {
+        server_no: stats["cpu_avg"]
+        for server_no, stats in cpu_stats_many(server_nos, days).items()
+    }

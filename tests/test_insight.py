@@ -53,6 +53,16 @@ class InsightStatsTests(unittest.TestCase):
                 result = insight.cpu_stats_many(["good", "bad"])
         self.assertEqual(result, {"good": {"cpu_avg": 1.0}})
 
+    def test_cpu_avg_many_keeps_missing_data_unknown(self):
+        stats = {
+            "running": {"cpu_avg": 0.5},
+            "no_data": {"cpu_avg": None},
+        }
+        with patch.object(insight, "cpu_stats_many", return_value=stats) as query:
+            result = insight.cpu_avg_many(["running", "no_data", "failed"], days=1)
+        self.assertEqual(result, {"running": 0.5, "no_data": None})
+        query.assert_called_once_with(["running", "no_data", "failed"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
