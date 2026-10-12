@@ -1,0 +1,27 @@
+# 출처: https://www.ncloud.com/charge/region/ko
+# 서버 종류 코드: https://guide.ncloud-docs.com/docs/server-spec-vpc
+# 확인일: 2026-10-12, 한국 리전, 원화/시간, VAT 별도, 예상 단가
+currency: KRW
+publicip_hourly: 5.6
+blockstorage_hourly_per_10gb:
+  HDD: 0.8
+  SSD: 1.6
+  FB1: 0.8  # KVM HDD
+  FB2: 0.8
+  CB1: 1.6  # KVM SSD
+  CB2: 1.6
+
+# g3 서버 요금은 기본 디스크를 제외한 컴퓨팅 부분이다.
+# s2-g3a = Standard-g3 2vCPU/8GB, c2-g3a = High CPU-g3 2vCPU/4GB.
+server_hourly:
+  RUNNING:
+    s2-g3a: 115
+    c2-g3a: 92
+  STOPPED: {}
+
+# 정지한 g3 서버는 컴퓨팅 요금 대신 기본 디스크 요금이 청구된다.
+# SSD/CB 스토리지 10GB당 1.6원/시간 = 1GB당 0.16원/시간.
+server_stopped_disk_gb_hour: 0.16
+# finsh-test-b-srv1의 기본 디스크 10GB는 2026-10-12 콘솔에서 확인.
+# 다른 서버에 이 크기를 일괄 적용하지 말고 서버별 BASIC 스토리지 용량을 읽는다.
+server_base_disk_gb: 10
