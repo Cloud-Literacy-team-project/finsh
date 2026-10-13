@@ -23,6 +23,13 @@ def _need_db(name):
         return True
     return False
 
+
+def _due_label(value):
+    if isinstance(value, datetime):
+        return f"{value:%m/%d}({WEEKDAY[value.weekday()]}) {value:%H:%M}"
+    return str(value)
+
+
 class FinshShell(cmd.Cmd):
     def __init__(self, user):
         super().__init__()
@@ -78,11 +85,13 @@ class FinshShell(cmd.Cmd):
         if data._fake():
             print(f"(가짜 모드) {r['id']}을(를) 휴지통에 넣었습니다. 삭제 예정 {plan['due_at']}")
             return
-        from db import database
         from engine import trash
-        trash.put(r, plan)
-        database.log("kill", r, "OK", f"휴지통, 삭제 예정 {plan['due_at']}")
-        print(f"{r['id']}을(를) 휴지통에 넣었습니다. 삭제 예정 {plan['due_at']}")
+        try:
+            trash.put(r, plan["due_at"])
+        except ValueError as exc:
+            screen.print_refused("kill", r["id"], str(exc))
+            return
+        print(f"{r['id']}을(를) 휴지통에 넣었습니다. 삭제 예정 {_due_label(plan['due_at'])}")
 
     def do_sudo(self, arg):
         """바로 영구 삭제: sudo kill -9 <ID>"""
@@ -96,8 +105,8 @@ class FinshShell(cmd.Cmd):
         r = self._get("sudo kill -9", args[2:], "sudo kill -9 <ID>")
         if r is None:
             return
-        reason = killer.refuse_reason(r)
-        if reason:
+        plan, reason = killer.prepare(r)
+        if plan is None:
             screen.print_refused("sudo kill -9", r["id"], reason)
             return
         screen.print_kill9_warning(r, safety.is_dry_run())
@@ -106,8 +115,20 @@ class FinshShell(cmd.Cmd):
             print("ID가 달라서 취소했습니다.")
             return
         print("삭제 중입니다... (서버는 몇 분 걸릴 수 있어요)")
-        ok, message = killer.kill_now(r, action="kill-9")
-        print(("완료: " if ok else "실패: ") + message)
+        try:
+            result = killer.kill_now(r, confirmed=True)
+        except killer.UnsafeDeletion as exc:
+            screen.print_refused("sudo kill -9", r["id"], str(exc))
+            return
+        except Exception:
+            print("실패: 삭제 또는 결과 확인에 실패했습니다. 자원 상태를 확인하세요.")
+            return
+        if result == "DRYRUN":
+            print("완료: (연습 모드) 실제로는 지우지 않았습니다")
+        elif result == "PURGED":
+            print("완료: 자원 삭제를 확인했습니다")
+        else:
+            print("실패: 삭제 결과를 확인할 수 없습니다")
 
     # ---------- 휴지통 ----------
     def do_trash_list(self, arg):
@@ -125,14 +146,16 @@ class FinshShell(cmd.Cmd):
             return
         if _need_db("trash-restore"):
             return
-        from db import database
         from engine import trash
-        row = trash.restore(args[0])
-        if row is None:
-            print(f"trash-restore: {args[0]}: 휴지통에 그런 ID가 없습니다")
+        try:
+            restored = trash.restore(args[0])
+        except ValueError as exc:
+            print(f"trash-restore: {args[0]}: {exc}")
             return
-        database.log("restore", row, "OK", "휴지통에서 꺼냄")
-        print(f"{row['id']} {row['name']}을(를) 꺼냈습니다. 다시 top에 보입니다.")
+        if not restored:
+            print(f"trash-restore: {args[0]}: 다른 작업 중이거나 이미 처리된 항목입니다")
+            return
+        print(f"{args[0]}을(를) 휴지통에서 꺼냈습니다. 다시 top에 보입니다.")
 
     # ---------- 보호 ----------
     def do_chattr(self, arg):

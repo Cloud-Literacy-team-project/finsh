@@ -101,6 +101,7 @@ def save_resources(resources, failed_types=()):
 LEAK_SQL = """
 SELECT r.* FROM resources r
 WHERE r.gone = 0 AND r.grade IN ('ORPHAN', 'ZOMBIE', 'IDLE')
+  AND r.terraform = 0
   AND r.ncp_no NOT IN (SELECT ncp_no FROM protections WHERE until IS NULL OR until > %s)
   AND r.ncp_no NOT IN (SELECT ncp_no FROM trash WHERE status IN ('WAITING', 'HELD'))
 ORDER BY r.cost_total DESC

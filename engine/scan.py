@@ -140,6 +140,11 @@ def run_scan(db=None, cpu_reader=None, terraform_reader=None, output_path=None, 
         if isinstance(metrics, dict):
             row.setdefault("detail", {}).update(metrics)
         judge(row, row["state_since"], t)
+        if terraform_nos is None and row["grade"] in CANDIDATES:
+            # The DB schema stores terraform as a boolean. Keep an unverified
+            # candidate out of top until the IaC inventory can be read.
+            row["grade"] = "UNKNOWN"
+            row["reason"] = "Terraform 보호 목록 확인 실패"
         row["cost_hourly"] = price.hourly(row)
         hours = max(0, (t - row["state_since"]).total_seconds() / 3600)
         row["cost_total"] = price.total(row, hours)
@@ -172,5 +177,7 @@ def run_scan(db=None, cpu_reader=None, terraform_reader=None, output_path=None, 
     message = " · ".join(f"{grade} {sum(row['grade'] == grade for row in rows)}" for grade in grades)
     if failed:
         message += " · 조회 실패: " + ", ".join(failed)
-    db.log("scan", result="FAIL" if failed else "OK", message=message)
+    if terraform_nos is None:
+        message += " · Terraform 보호 목록 확인 실패"
+    db.log("scan", result="FAIL" if failed or terraform_nos is None else "OK", message=message)
     return len(rows), len(leaks)

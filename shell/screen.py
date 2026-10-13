@@ -70,8 +70,10 @@ def print_top(leaks, summary=None):
     # 3. 요약 정보 계산 및 출력
     count = {g: sum(r.get("grade") == g for r in candidates) for g in ("ORPHAN", "ZOMBIE", "IDLE")}
     hourly = sum(r.get("cost_hourly") or 0 for r in candidates)
-    waiting_cnt = sum(1 for r in leaks if r.get("grade") == "WAITING")
-    unknown_cnt = sum(1 for r in leaks if r.get("grade") == "UNKNOWN")
+    waiting_cnt = (summary["waiting"] if summary is not None else
+                   sum(1 for r in leaks if r.get("grade") == "WAITING"))
+    unknown_cnt = (sum(n for _, n in summary["unknown"]) if summary is not None else
+                   sum(1 for r in leaks if r.get("grade") == "UNKNOWN"))
 
     console.print("  정리 후보: " + " · ".join(f"{g} {n}" for g, n in count.items()))
     console.print(f"  후보 예상 비용: 시간당 [bold red]{hourly:,.1f}원[/bold red]")
@@ -105,11 +107,16 @@ def print_stat(r):
 
 def print_kill_confirm(r, plan):
     """kill 승인 안내 패널"""
+    due = plan["due_at"]
+    if hasattr(due, "strftime"):
+        weekday = "월화수목금토일"[due.weekday()]
+        due = f"{due:%m/%d}({weekday}) {due:%H:%M}"
+    estimated = plan.get("estimated_cost", plan.get("extra_cost"))
     content = (
         f"[bold]{r['id']}[/bold]  {r.get('name')}  ({TYPE_NAME.get(r.get('type'), r.get('type'))}, {r.get('grade')})\n\n"
         f"이 자원을 [bold yellow]휴지통[/bold yellow]에 넣습니다.\n"
-        f"  • 영구 삭제 예정: [bold]{plan['due_at']}[/bold]\n"
-        f"  • 그때까지 더 나가는 요금: [bold red]약 {_v(plan['extra_cost'], '원')}[/bold red]\n"
+        f"  • 영구 삭제 예정: [bold]{due}[/bold]\n"
+        f"  • 그때까지 더 나가는 요금: [bold red]약 {_v(estimated, '원')}[/bold red]\n"
         f"  • 삭제 보류 안내: 유예 기간 중 재가동 시 삭제 자동 보류\n"
         f"  • 복원 명령어: trash-restore {r['id']}\n\n"
         f"[dim]기다리지 않고 바로 지우려면: sudo kill -9 {r['id']}[/dim]"

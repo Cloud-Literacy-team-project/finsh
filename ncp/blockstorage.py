@@ -11,6 +11,7 @@ def list_all():
     """기본 디스크를 포함한 블록 스토리지 전체를 반환한다."""
     result = []
     page_no = 1
+    expected_total = None
 
     while True:
         data = call(
@@ -51,9 +52,19 @@ def list_all():
                 },
             })
 
-        total_rows = int(response.get("totalRows") or 0)
-        if not items or len(items) < PAGE_SIZE or (total_rows and len(result) >= total_rows):
+        if response.get("totalRows") is None:
+            raise RuntimeError("스토리지 목록 총건수를 확인할 수 없습니다")
+        total_rows = int(response["totalRows"])
+        if expected_total is None:
+            expected_total = total_rows
+        if total_rows != expected_total or (total_rows == 0 and items):
+            raise RuntimeError("스토리지 목록이 조회 중 변경되었습니다")
+        if not items and total_rows > len(result):
+            raise RuntimeError("스토리지 목록이 일부만 조회되었습니다")
+        if not items or (total_rows and len(result) >= total_rows):
             break
         page_no += 1
 
+    if len(result) != expected_total or len({item["ncp_no"] for item in result}) != len(result):
+        raise RuntimeError("스토리지 전체 목록을 완전하게 확인하지 못했습니다")
     return result
