@@ -6,8 +6,11 @@ import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from engine import scan
+from jobs import run_scan as scan_job
+from ncp.insight import stats_from_points
 
 
 START = datetime(2026, 10, 12, 12, 0)
@@ -50,6 +53,71 @@ def basic_disk():
 
 
 class ScanTests(unittest.TestCase):
+    def setUp(self):
+        sync = patch("engine.protect.sync_terraform")
+        self.sync = sync.start()
+        self.addCleanup(sync.stop)
+
+    def test_confirmed_empty_terraform_inventory_is_synced(self):
+        db = MemoryDB()
+        with tempfile.TemporaryDirectory() as folder, \
+             patch.dict(scan.LISTERS, {"server": lambda: [], "publicip": lambda: [publicip()],
+                                       "blockstorage": lambda: []}):
+            scan.run_scan(db=db, terraform_reader=lambda: set(),
+                          output_path=Path(folder) / "leak.json", at=START)
+        self.sync.assert_called_once_with(set())
+        self.assertEqual(db.rows[0]["grade"], "ORPHAN")
+
+    def test_protection_sync_failure_blocks_candidates(self):
+        self.sync.side_effect = RuntimeError("DB failure")
+        db = MemoryDB()
+        with tempfile.TemporaryDirectory() as folder, \
+             patch.dict(scan.LISTERS, {"server": lambda: [], "publicip": lambda: [publicip()],
+                                       "blockstorage": lambda: []}):
+            scan.run_scan(db=db, terraform_reader=lambda: {"999"},
+                          output_path=Path(folder) / "leak.json", at=START)
+        self.assertEqual(db.rows[0]["grade"], "UNKNOWN")
+        self.assertIn("동기화 실패", db.rows[0]["reason"])
+        self.assertEqual(db.logs[-1][1]["result"], "FAIL")
+
+    def test_cpu_query_uses_the_same_time_as_judgement(self):
+        with patch("ncp.insight.cpu_stats_many", return_value={}) as query:
+            self.assertEqual(scan._cpu(["101"], at=START), {})
+        query.assert_called_once_with(["101"], days=7, end_at=START)
+
+    def test_job_reports_detected_and_visible_counts_separately(self):
+        with patch.object(scan_job, "run_scan", return_value=(5, 2)), \
+             patch.object(scan_job.database, "get_leaks", return_value=[{"id": "ip-201"}]), \
+             patch("builtins.print") as output:
+            scan_job.main()
+        self.assertIn("탐지 후보 2개, top 표시 1개", output.call_args_list[-1].args[0])
+
+    def test_insight_evidence_reaches_idle_judgement(self):
+        db = MemoryDB()
+        observed_at = START + timedelta(days=8)
+        db.known["101"] = {"state": "RUNNING", "state_since": START,
+                           "last_seen": observed_at - timedelta(minutes=30)}
+        end_ms = int(observed_at.replace(tzinfo=ZoneInfo("Asia/Seoul")).timestamp() * 1000)
+        interval_ms = 30 * 60_000
+        start_ms = end_ms - 7 * 86_400_000
+        points = [[stamp, 2.0] for stamp in range(start_ms + interval_ms, end_ms + 1, interval_ms)]
+        stats = stats_from_points(points, start_ms, end_ms, interval_ms)
+
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(scan.LISTERS, {"server": lambda: [server("RUNNING")],
+                                          "publicip": lambda: [], "blockstorage": lambda: []}):
+                scan.run_scan(db=db, cpu_reader=lambda numbers, days: {"101": stats},
+                              terraform_reader=lambda: set(),
+                              output_path=Path(folder) / "leak.json", at=observed_at)
+                self.assertEqual(db.rows[0]["grade"], "IDLE")
+                self.assertEqual(db.rows[0]["detail"]["cpu_avg"], 2.0)
+
+                insufficient = stats_from_points([], start_ms, end_ms, interval_ms)
+                scan.run_scan(db=db, cpu_reader=lambda numbers, days: {"101": insufficient},
+                              terraform_reader=lambda: set(),
+                              output_path=Path(folder) / "leak.json", at=observed_at)
+                self.assertEqual(db.rows[0]["grade"], "UNKNOWN")
+
     def test_scope_allows_named_resources_and_listed_public_ips_only(self):
         cfg = {"scan_name_prefix": "finsh-", "allowed_ncp_no": ["201"]}
         self.assertTrue(scan.in_scope(server(), cfg))

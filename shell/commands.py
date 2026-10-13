@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 from shell import data, screen
 
-WEEKDAY = "월화수목금토일"
 DASH_COMMANDS = {"trash-list": "trash_list", "trash-restore": "trash_restore"}
 
 def _fake_kill_plan(r):
@@ -14,7 +13,7 @@ def _fake_kill_plan(r):
     if r["grade"] not in ("ORPHAN", "ZOMBIE", "IDLE"):
         return None, f"정리 후보(ORPHAN·ZOMBIE·IDLE)가 아닙니다 (지금 판정: {r['grade']})"
     due = datetime.now() + timedelta(days=3)
-    return {"due": due, "due_at": f"{due:%m/%d}({WEEKDAY[due.weekday()]}) {due:%H:%M}",
+    return {"due": due, "due_at": screen.format_due_at(due),
             "extra_cost": round((r["cost_hourly"] or 0) * 72, 1)}, None
 
 def _need_db(name):
@@ -22,12 +21,6 @@ def _need_db(name):
         print(f"{name}: 가짜 모드에서는 쓸 수 없습니다 (FINSH_SOURCE=db 필요)")
         return True
     return False
-
-
-def _due_label(value):
-    if isinstance(value, datetime):
-        return f"{value:%m/%d}({WEEKDAY[value.weekday()]}) {value:%H:%M}"
-    return str(value)
 
 
 class FinshShell(cmd.Cmd):
@@ -91,7 +84,7 @@ class FinshShell(cmd.Cmd):
         except ValueError as exc:
             screen.print_refused("kill", r["id"], str(exc))
             return
-        print(f"{r['id']}을(를) 휴지통에 넣었습니다. 삭제 예정 {_due_label(plan['due_at'])}")
+        print(f"{r['id']}을(를) 휴지통에 넣었습니다. 삭제 예정 {screen.format_due_at(plan['due_at'])}")
 
     def do_sudo(self, arg):
         """바로 영구 삭제: sudo kill -9 <ID>"""
@@ -127,6 +120,8 @@ class FinshShell(cmd.Cmd):
             print("완료: (연습 모드) 실제로는 지우지 않았습니다")
         elif result == "PURGED":
             print("완료: 자원 삭제를 확인했습니다")
+        elif result == "DELETE_REQUESTED":
+            print("삭제 요청이 접수됐습니다. 아직 완료를 확인하지 못해 자동 작업이 계속 확인합니다.")
         else:
             print("실패: 삭제 결과를 확인할 수 없습니다")
 

@@ -69,14 +69,15 @@ def _attach_basic_disks(rows):
             owner_detail["base_disk_type"] = detail.get("disk_type")
 
 
-def _cpu(server_nos, cpu_reader=None):
+def _cpu(server_nos, cpu_reader=None, at=None):
     if not server_nos:
         return {}
     try:
         if cpu_reader is None:
             from ncp.insight import cpu_stats_many
-            cpu_reader = cpu_stats_many
-        result = cpu_reader(server_nos, days=settings["idle_days"])
+            result = cpu_stats_many(server_nos, days=settings["idle_days"], end_at=at)
+        else:
+            result = cpu_reader(server_nos, days=settings["idle_days"])
         if not isinstance(result, dict):
             raise TypeError("CPU 조회 결과는 자원 번호별 dict여야 합니다")
         return {str(number): values for number, values in result.items()}
@@ -115,7 +116,11 @@ def _require_database(db):
 
 
 def run_scan(db=None, cpu_reader=None, terraform_reader=None, output_path=None, at=None):
-    """모든 판정을 저장하고 후보만 leak.json에 쓴다. (전체 수, 후보 수) 반환."""
+    """모든 판정을 저장하고 탐지 후보를 기록한다. (전체 수, 탐지 후보 수) 반환.
+
+    탐지 후보에는 Terraform 보호 자원이 포함될 수 있다. 화면의 실제 후보 수는
+    DB의 get_leaks()가 보호·휴지통 상태까지 적용해 결정한다.
+    """
     db = database if db is None else db
     _require_database(db)
     t = now() if at is None else at
@@ -132,8 +137,17 @@ def run_scan(db=None, cpu_reader=None, terraform_reader=None, output_path=None, 
 
     need_cpu = [row["ncp_no"] for row in rows if row["type"] == "server" and row["state"] == "RUNNING"
                 and (t - row["state_since"]).total_seconds() >= float(settings["idle_days"]) * 86400]
-    cpu = _cpu(need_cpu, cpu_reader)
+    cpu = _cpu(need_cpu, cpu_reader, t)
     terraform_nos = _terraform_nos(terraform_reader)
+    terraform_error = "Terraform 보호 목록 확인 실패"
+    if terraform_nos is not None:
+        try:
+            from engine.protect import sync_terraform
+            sync_terraform(terraform_nos)
+        except Exception:
+            terraform_nos = None
+            terraform_error = "Terraform 보호 동기화 실패"
+            print("[scan] Terraform 보호 동기화 실패")
 
     for row in rows:
         metrics = cpu.get(str(row["ncp_no"]))
@@ -144,7 +158,7 @@ def run_scan(db=None, cpu_reader=None, terraform_reader=None, output_path=None, 
             # The DB schema stores terraform as a boolean. Keep an unverified
             # candidate out of top until the IaC inventory can be read.
             row["grade"] = "UNKNOWN"
-            row["reason"] = "Terraform 보호 목록 확인 실패"
+            row["reason"] = terraform_error
         row["cost_hourly"] = price.hourly(row)
         hours = max(0, (t - row["state_since"]).total_seconds() / 3600)
         row["cost_total"] = price.total(row, hours)
@@ -156,13 +170,6 @@ def run_scan(db=None, cpu_reader=None, terraform_reader=None, output_path=None, 
     # DB 계약: save_resources는 모든 rows를 갱신하고 failed 종류의 기존 자원은
     # 삭제하지 않은 채 UNKNOWN(목록 조회 실패)으로 표시해야 한다.
     db.save_resources(rows, failed)
-    if terraform_nos:
-        try:
-            from engine.protect import sync_terraform
-            sync_terraform(terraform_nos)
-        except Exception as exc:
-            print(f"[scan] Terraform 보호 동기화 실패: {exc}")
-
     leaks = [row for row in rows if row["grade"] in CANDIDATES]
     out = [{key: value for key, value in row.items() if key not in ("state_since", "last_seen")}
            for row in leaks]
@@ -178,6 +185,6 @@ def run_scan(db=None, cpu_reader=None, terraform_reader=None, output_path=None, 
     if failed:
         message += " · 조회 실패: " + ", ".join(failed)
     if terraform_nos is None:
-        message += " · Terraform 보호 목록 확인 실패"
+        message += " · " + terraform_error
     db.log("scan", result="FAIL" if failed or terraform_nos is None else "OK", message=message)
     return len(rows), len(leaks)

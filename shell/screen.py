@@ -70,13 +70,15 @@ def print_top(leaks, summary=None):
     # 3. 요약 정보 계산 및 출력
     count = {g: sum(r.get("grade") == g for r in candidates) for g in ("ORPHAN", "ZOMBIE", "IDLE")}
     hourly = sum(r.get("cost_hourly") or 0 for r in candidates)
+    unknown_cost = sum(r.get("cost_hourly") is None for r in candidates)
     waiting_cnt = (summary["waiting"] if summary is not None else
                    sum(1 for r in leaks if r.get("grade") == "WAITING"))
     unknown_cnt = (sum(n for _, n in summary["unknown"]) if summary is not None else
                    sum(1 for r in leaks if r.get("grade") == "UNKNOWN"))
 
     console.print("  정리 후보: " + " · ".join(f"{g} {n}" for g, n in count.items()))
-    console.print(f"  후보 예상 비용: 시간당 [bold red]{hourly:,.1f}원[/bold red]")
+    cost_note = f" · 요금 미확인 {unknown_cost}개" if unknown_cost else ""
+    console.print(f"  후보 예상 비용: 확인된 금액 시간당 [bold red]{hourly:,.1f}원[/bold red]{cost_note}")
     console.print(f"  관찰 중: WAITING {waiting_cnt}개 | 판정 불가: UNKNOWN {unknown_cnt}개")
     if summary and summary.get("last_scan"):
         console.print(f"  마지막 검사: {summary['last_scan']:%m/%d %H:%M}")
@@ -97,6 +99,19 @@ def print_stat(r):
         ("Terraform 관리", "예 (IaC 보호됨)" if r.get("terraform") else "아니오"),
     ]
 
+    if r.get("type") == "server":
+        detail = r.get("detail") or {}
+        count, expected = detail.get("cpu_sample_count"), detail.get("cpu_expected_count")
+        samples = f"{count}/{expected}" if count is not None and expected is not None else "-"
+        coverage = detail.get("cpu_coverage")
+        if isinstance(coverage, (int, float)):
+            samples += f" ({coverage:.0%})"
+        rows[8:8] = [
+            ("CPU 평균", _v(detail.get("cpu_avg"), "%")),
+            ("CPU 측정값", samples),
+            ("마지막 CPU 측정", _v(detail.get("cpu_last_at"))),
+        ]
+
     grid = Table.grid(padding=(0, 2))
     grid.add_column(style="bold cyan", no_wrap=True)
     grid.add_column()
@@ -105,12 +120,17 @@ def print_stat(r):
 
     console.print(Panel(grid, title=f"[bold green]stat {r['id']}[/bold green]", expand=False))
 
+def format_due_at(value):
+    """휴지통 삭제 예정 시각을 화면에 표시할 형식으로 바꾼다."""
+    if hasattr(value, "strftime"):
+        weekday = "월화수목금토일"[value.weekday()]
+        return f"{value:%m/%d}({weekday}) {value:%H:%M}"
+    return str(value)
+
+
 def print_kill_confirm(r, plan):
     """kill 승인 안내 패널"""
-    due = plan["due_at"]
-    if hasattr(due, "strftime"):
-        weekday = "월화수목금토일"[due.weekday()]
-        due = f"{due:%m/%d}({weekday}) {due:%H:%M}"
+    due = format_due_at(plan["due_at"])
     estimated = plan.get("estimated_cost", plan.get("extra_cost"))
     content = (
         f"[bold]{r['id']}[/bold]  {r.get('name')}  ({TYPE_NAME.get(r.get('type'), r.get('type'))}, {r.get('grade')})\n\n"
@@ -136,7 +156,10 @@ def _table(title, columns):
 def _dt(value):
     return value.strftime("%m/%d %H:%M") if value else "-"
 
-STATUS_NAME = {"WAITING": "[yellow]대기[/yellow]", "HELD": "[bold red]보류[/bold red]"}
+STATUS_NAME = {"WAITING": "[yellow]대기[/yellow]",
+               "DELETE_REQUESTED": "[cyan]삭제 완료 확인 중[/cyan]",
+               "HELD": "[bold red]보류[/bold red]",
+               "FAILED": "[bold red]수동 확인 필요[/bold red]"}
 
 def print_trash(rows):
     """trash-list"""
@@ -161,7 +184,8 @@ def print_lsattr(rows):
                       "영구" if p["until"] is None else _dt(p["until"]))
     console.print(table)
 
-RESULT_COLOR = {"OK": "green", "DRYRUN": "yellow", "FAIL": "red"}
+RESULT_COLOR = {"OK": "green", "DRYRUN": "yellow", "PENDING": "cyan",
+                "REQUESTED": "cyan", "FAIL": "red"}
 
 def print_last(rows):
     """last: 최근 기록 (최신이 위)"""

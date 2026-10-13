@@ -1,0 +1,8 @@
+# Install as /etc/cron.d/finsh (root:root, 0644), after code and DB verification.
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+*/30 * * * * finsh cd /opt/finsh && flock -n /tmp/finsh-scan.lock .venv/bin/python -m jobs.run_scan >> /var/log/finsh/scan.log 2>&1
+*/5 * * * * finsh cd /opt/finsh && flock -n /tmp/finsh-watch.lock .venv/bin/python -m jobs.run_watch >> /var/log/finsh/watch.log 2>&1
+*/10 * * * * finsh cd /opt/finsh && flock -n /tmp/finsh-purge.lock .venv/bin/python -m jobs.run_purge >> /var/log/finsh/purge.log 2>&1
+

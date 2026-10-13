@@ -68,6 +68,35 @@ def detached_ip():
 
 
 class ABCIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        sync = patch("engine.protect.sync_terraform")
+        sync.start()
+        self.addCleanup(sync.stop)
+
+    def test_stat_shows_cpu_evidence_and_protection(self):
+        output = io.StringIO()
+        resource = {"id": "srv-101", "type": "server", "name": "finsh-test-server",
+                    "grade": "IDLE", "protected": True, "protected_memo": "시연 중",
+                    "detail": {"cpu_avg": 2.0, "cpu_sample_count": 8,
+                               "cpu_expected_count": 10, "cpu_coverage": 0.8,
+                               "cpu_last_at": "2026-10-13T12:00:00+09:00"}}
+        with patch.object(screen, "console", Console(file=output)):
+            screen.print_stat(resource)
+        rendered = output.getvalue()
+        self.assertIn("CPU 평균", rendered)
+        self.assertIn("2.0%", rendered)
+        self.assertIn("8/10 (80%)", rendered)
+        self.assertIn("시연 중", rendered)
+
+    def test_top_identifies_unknown_cost(self):
+        output = io.StringIO()
+        candidate = {"id": "ip-201", "name": "finsh-test-ip", "type": "publicip",
+                     "grade": "ORPHAN", "cost_hourly": None, "cost_total": None}
+        with patch.object(screen, "console", Console(file=output)):
+            screen.print_top([candidate])
+        self.assertIn("확인된 금액 시간당", output.getvalue())
+        self.assertIn("요금 미확인 1개", output.getvalue())
+
     def test_scan_top_kill_trash_and_restore(self):
         state = {"rows": [], "trashed": False, "due": None}
         db = Mock()

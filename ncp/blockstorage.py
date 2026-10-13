@@ -1,6 +1,7 @@
 """NCP VPC 블록 스토리지 목록을 finsh 자원 형식으로 변환한다."""
 
 from ncp.api import call
+from ncp.paging import ensure_complete, page_total
 
 
 PAGE_SIZE = 1000
@@ -52,19 +53,10 @@ def list_all():
                 },
             })
 
-        if response.get("totalRows") is None:
-            raise RuntimeError("스토리지 목록 총건수를 확인할 수 없습니다")
-        total_rows = int(response["totalRows"])
-        if expected_total is None:
-            expected_total = total_rows
-        if total_rows != expected_total or (total_rows == 0 and items):
-            raise RuntimeError("스토리지 목록이 조회 중 변경되었습니다")
-        if not items and total_rows > len(result):
-            raise RuntimeError("스토리지 목록이 일부만 조회되었습니다")
-        if not items or (total_rows and len(result) >= total_rows):
+        expected_total = page_total(response, items, expected_total, len(result), "스토리지")
+        if not items or (expected_total and len(result) >= expected_total):
             break
         page_no += 1
 
-    if len(result) != expected_total or len({item["ncp_no"] for item in result}) != len(result):
-        raise RuntimeError("스토리지 전체 목록을 완전하게 확인하지 못했습니다")
+    ensure_complete(result, expected_total, "스토리지")
     return result

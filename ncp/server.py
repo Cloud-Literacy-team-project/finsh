@@ -1,4 +1,5 @@
 from ncp.api import call
+from ncp.paging import ensure_complete, page_total, response_items
 
 STATUS = {
     "RUN": "RUNNING",
@@ -15,18 +16,8 @@ def list_all():
         data = call("/vserver/v2/getServerInstanceList",
                     {"regionCode": "KR", "pageNo": page_no, "pageSize": PAGE_SIZE})
         response = data["getServerInstanceListResponse"]
-        if str(response.get("returnCode")) != "0":
-            raise RuntimeError(response.get("returnMessage", "서버 목록 조회 실패"))
-        items = response.get("serverInstanceList") or []
-        if response.get("totalRows") is None:
-            raise RuntimeError("서버 목록 총건수를 확인할 수 없습니다")
-        total = int(response["totalRows"])
-        if expected_total is None:
-            expected_total = total
-        if total != expected_total or (total == 0 and items):
-            raise RuntimeError("서버 목록이 조회 중 변경되었습니다")
-        if not items and total > len(result):
-            raise RuntimeError("서버 목록이 일부만 조회되었습니다")
+        items = response_items(response, "serverInstanceList", "서버")
+        expected_total = page_total(response, items, expected_total, len(result), "서버")
         for server in items:
             code = (server.get("serverInstanceStatus") or {}).get("code")
 
@@ -44,9 +35,8 @@ def list_all():
                     "termination_protected": server.get("isProtectServerTermination"),
                 },
             })
-        if not items or len(result) >= total:
+        if not items or len(result) >= expected_total:
             break
         page_no += 1
-    if len(result) != expected_total or len({item["ncp_no"] for item in result}) != len(result):
-        raise RuntimeError("서버 전체 목록을 완전하게 확인하지 못했습니다")
+    ensure_complete(result, expected_total, "서버")
     return result

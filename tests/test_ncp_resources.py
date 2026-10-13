@@ -17,6 +17,32 @@ def sample(name):
 
 
 class ResourceListTests(unittest.TestCase):
+    def test_public_ip_list_requires_every_page(self):
+        first = sample("publicip.json")
+        second = copy.deepcopy(first)
+        response_key = "getPublicIpInstanceListResponse"
+        item_key = "publicIpInstanceList"
+        first[response_key][item_key] = first[response_key][item_key][:1]
+        second[response_key][item_key] = second[response_key][item_key][1:]
+
+        with patch.object(publicip, "call", side_effect=[first, second]) as api:
+            result = publicip.list_all()
+
+        self.assertEqual([r["ncp_no"] for r in result], ["1001", "1002"])
+        self.assertEqual(api.call_count, 2)
+
+    def test_storage_list_rejects_duplicate_across_pages(self):
+        first = sample("blockstorage.json")
+        second = copy.deepcopy(first)
+        response_key = "getBlockStorageInstanceListResponse"
+        item_key = "blockStorageInstanceList"
+        first[response_key][item_key] = first[response_key][item_key][:1]
+        second[response_key][item_key] = second[response_key][item_key][:1]
+
+        with patch.object(blockstorage, "call", side_effect=[first, second]):
+            with self.assertRaisesRegex(RuntimeError, "전체 목록을 완전하게 확인하지 못했습니다"):
+                blockstorage.list_all()
+
     def test_public_ips_use_assignment_and_description(self):
         data = sample("publicip.json")
         items = data["getPublicIpInstanceListResponse"]["publicIpInstanceList"]
