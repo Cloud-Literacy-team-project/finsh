@@ -1,6 +1,7 @@
 """NCP VPC 공인 IP 목록을 finsh 자원 형식으로 변환한다."""
 
 from ncp.api import call
+from ncp.paging import ensure_complete, page_total, response_items
 
 
 PAGE_SIZE = 1000
@@ -10,6 +11,7 @@ def list_all():
     """공인 IP 전체를 반환한다. 할당 여부는 IP 자체의 RUN 상태와 별개다."""
     result = []
     page_no = 1
+    expected_total = None
 
     while True:
         data = call(
@@ -17,10 +19,7 @@ def list_all():
             {"regionCode": "KR", "pageNo": page_no, "pageSize": PAGE_SIZE},
         )
         response = data["getPublicIpInstanceListResponse"]
-        if str(response.get("returnCode")) != "0":
-            raise RuntimeError(response.get("returnMessage", "공인 IP 목록 조회 실패"))
-
-        items = response.get("publicIpInstanceList") or []
+        items = response_items(response, "publicIpInstanceList", "공인 IP")
         for item in items:
             code = (item.get("publicIpInstanceStatus") or {}).get("code")
             operation = (item.get("publicIpInstanceOperation") or {}).get("code")
@@ -47,9 +46,10 @@ def list_all():
                 },
             })
 
-        total_rows = int(response.get("totalRows") or 0)
-        if not items or len(items) < PAGE_SIZE or (total_rows and len(result) >= total_rows):
+        expected_total = page_total(response, items, expected_total, len(result), "공인 IP")
+        if not items or (expected_total and len(result) >= expected_total):
             break
         page_no += 1
 
+    ensure_complete(result, expected_total, "공인 IP")
     return result

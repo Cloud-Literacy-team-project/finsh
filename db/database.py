@@ -101,8 +101,13 @@ def save_resources(resources, failed_types=()):
 LEAK_SQL = """
 SELECT r.* FROM resources r
 WHERE r.gone = 0 AND r.grade IN ('ORPHAN', 'ZOMBIE', 'IDLE')
+  AND r.terraform = 0
   AND r.ncp_no NOT IN (SELECT ncp_no FROM protections WHERE until IS NULL OR until > %s)
-  AND r.ncp_no NOT IN (SELECT ncp_no FROM trash WHERE status IN ('WAITING', 'HELD'))
+  AND r.ncp_no NOT IN (
+      SELECT ncp_no FROM trash
+      WHERE status IN ('WAITING', 'HELD', 'DELETE_REQUESTED')
+         OR (status = 'FAILED' AND delete_requested_at IS NOT NULL)
+  )
 ORDER BY r.cost_total DESC
 """
 
@@ -119,7 +124,15 @@ def get_resource(rid):
     with connect() as conn, conn.cursor() as cur:
         cur.execute("SELECT * FROM resources WHERE gone = 0 AND id LIKE %s", (rid + "%",))
         rows = cur.fetchall()
-        return _to_dict(rows[0]) if len(rows) == 1 else None
+        if len(rows) != 1:
+            return None
+        resource = _to_dict(rows[0])
+        cur.execute("SELECT reason FROM protections WHERE ncp_no=%s AND (until IS NULL OR until > %s)",
+                    (resource["ncp_no"], now()))
+        protection = cur.fetchone()
+        resource["protected"] = protection is not None
+        resource["protected_memo"] = protection["reason"] if protection else None
+        return resource
 
 
 def get_summary():

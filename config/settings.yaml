@@ -4,6 +4,7 @@ orphan_days: 0
 idle_days: 7
 idle_cpu_percent: 5
 observe_max_gap_minutes: 90
+delete_confirmation_minutes: 60
 cpu_min_coverage: 0.8
 cpu_max_missing: 2
 
@@ -16,6 +17,9 @@ notify_before: { unit: bizdays, value: 1 }
 
 # 보호 기간
 protect_days: 30
+
+# Object Storage Terraform 기록 (환경변수 FINSH_TFSTATE_BUCKET으로 덮어쓸 수 있음)
+tfstate_bucket: "finsh-tfstate-1com4soft"
 
 # 개발 중 안전장치: 진짜로 지울 수 있는 것은 아래 둘 중 하나에 해당하는 것만
 allowed_name_prefix: "finsh-test-"

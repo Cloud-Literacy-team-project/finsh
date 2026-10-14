@@ -1,6 +1,7 @@
 """NCP VPC 블록 스토리지 목록을 finsh 자원 형식으로 변환한다."""
 
 from ncp.api import call
+from ncp.paging import ensure_complete, page_total
 
 
 PAGE_SIZE = 1000
@@ -11,6 +12,7 @@ def list_all():
     """기본 디스크를 포함한 블록 스토리지 전체를 반환한다."""
     result = []
     page_no = 1
+    expected_total = None
 
     while True:
         data = call(
@@ -51,9 +53,10 @@ def list_all():
                 },
             })
 
-        total_rows = int(response.get("totalRows") or 0)
-        if not items or len(items) < PAGE_SIZE or (total_rows and len(result) >= total_rows):
+        expected_total = page_total(response, items, expected_total, len(result), "스토리지")
+        if not items or (expected_total and len(result) >= expected_total):
             break
         page_no += 1
 
+    ensure_complete(result, expected_total, "스토리지")
     return result

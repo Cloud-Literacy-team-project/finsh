@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS resources (
     grade           VARCHAR(16)  NOT NULL DEFAULT 'OK',  -- ORPHAN / ZOMBIE / IDLE (top) · WAITING / UNKNOWN / OK (DB만)
     reason          VARCHAR(255) NULL,                   -- 판정 이유 (예: CPU 조회 실패, 정지 관측 3.2일)
     idle_days       DECIMAL(8,2) NOT NULL DEFAULT 0,
-    cost_hourly     DECIMAL(10,2) NOT NULL DEFAULT 0,
-    cost_total      DECIMAL(12,2) NOT NULL DEFAULT 0,
+    cost_hourly     DECIMAL(10,2) NULL,                  -- 단가 미확인이면 NULL
+    cost_total      DECIMAL(12,2) NULL,                  -- 금액 미확인이면 NULL
     cost_yesterday  DECIMAL(12,2) NULL,
     creator         VARCHAR(64)  NULL,
     created_at      DATETIME     NULL,
@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS trash (
     type         VARCHAR(16) NOT NULL,
     put_at       DATETIME    NOT NULL,
     due_at       DATETIME    NOT NULL,                    -- 이 시각이 지나면 영구 삭제
-    status       VARCHAR(16) NOT NULL DEFAULT 'WAITING',  -- WAITING / HELD / RESTORED / PURGED / FAILED
+    delete_requested_at DATETIME NULL,                    -- NCP 삭제 요청을 보냈을 수 있는 시각
+    status       VARCHAR(16) NOT NULL DEFAULT 'WAITING',  -- WAITING / DELETE_REQUESTED / HELD / RESTORED / PURGED / FAILED
     hold_reason  VARCHAR(255) NULL,
     snapshot     JSON        NULL,                        -- 넣을 때의 상태 (변화 감지용)
     notified     TINYINT(1)  NOT NULL DEFAULT 0,          -- 하루 전 알림 보냈으면 1
