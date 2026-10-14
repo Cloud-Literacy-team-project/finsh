@@ -28,9 +28,9 @@ def _rounded(amount):
     return float(amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
-def hourly(resource):
+def hourly(resource, prices=None):
     """시간당 예상 원화 요금. 단가가 확인되지 않았으면 None."""
-    prices = _prices()
+    prices = _prices() if prices is None else prices
     kind = resource["type"]
     if kind == "publicip":
         rate = prices.get("publicip_hourly")
@@ -44,23 +44,30 @@ def hourly(resource):
         rate = Decimal(str(unit_rate)) * Decimal(str(size_gb)) / Decimal("10")
     elif kind == "server":
         state = resource.get("state")
-        spec = (resource.get("detail") or {}).get("spec")
-        rate = prices.get("server_hourly", {}).get(state, {}).get(spec)
+        detail = resource.get("detail") or {}
+        if state == "RUNNING":
+            rate = prices.get("server_hourly", {}).get("RUNNING", {}).get(detail.get("spec"))
+        elif state == "STOPPED":
+            # g3 정지 서버는 기본 디스크 비용만 남는다. 크기를 모르면 0원으로 추정하지 않는다.
+            size_gb = detail.get("base_disk_gb")
+            disk_type = detail.get("base_disk_type")
+            unit_rate = prices.get("blockstorage_hourly_per_10gb", {}).get(disk_type)
+            if size_gb is None or unit_rate is None:
+                return None
+            rate = Decimal(str(unit_rate)) * Decimal(str(size_gb)) / Decimal("10")
+        else:
+            return None
     else:
         return None
     return float(Decimal(str(rate))) if rate is not None else None
 
 
-def total(resource, idle_since=None, as_of=None):
-    """방치 시작 시각부터 쌓인 예상 요금. 시작 시각은 판정 함수가 제공한다."""
-    rate = hourly(resource)
-    idle_since = idle_since or resource.get("idle_since")
-    if rate is None or idle_since is None:
+def total(resource, hours, prices=None):
+    """현재 상태로 관측한 hours 시간의 예상 요금. 실제 과거 청구액은 아니다."""
+    rate = hourly(resource, prices)
+    if rate is None:
         return None
-    start = _time(idle_since)
-    end = _time(as_of or datetime.now(timezone.utc))
-    hours = max(Decimal("0"), Decimal(str((end - start).total_seconds())) / Decimal("3600"))
-    return _rounded(Decimal(str(rate)) * hours)
+    return _rounded(Decimal(str(rate)) * max(Decimal("0"), Decimal(str(hours))))
 
 
 def trash_cost(resource, delete_at, now=None):

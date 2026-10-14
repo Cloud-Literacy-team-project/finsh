@@ -151,6 +151,8 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
 .envrc
 .venv
 env/
@@ -231,6 +233,12 @@ terraform.tfvars
 # Terraform credentials and generated key/plan files
 .terraform/
 *.pem
+*.key
+*.ppk
+*.p12
+*.pfx
+*.jks
+*.keystore
 *.plan
 backend.hcl
 backend.*.hcl
@@ -238,5 +246,15 @@ backend.*.hcl
 !terraform.tfvars.example
 !.terraform.lock.hcl
 
-# 실제 자원 정보가 담긴 스캔 결과
+# Local resource data
 leak.json
+leak.json.tmp
+
+# Private C notes
+/C-TODAY-2026-10-09.md
+/docs/c-api-findings.md
+/C-TODAY-2026-10-12.md
+/C-TODAY-2026-10-14.md
+
+# Local logs
+logs/
